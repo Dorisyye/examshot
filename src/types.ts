@@ -1,7 +1,7 @@
 // 监考拍摄进度看板 - 核心数据类型
 
-/** 任务类型：人脸+屏幕照 / 结果照 / USB拷贝录屏 */
-export type TaskType = "face_screen" | "result" | "usb_copy";
+/** 任务类型：人脸+屏幕照 / 结果照 */
+export type TaskType = "face_screen" | "result";
 
 /** 任务状态 */
 export type TaskStatus = "pending" | "done";
@@ -102,14 +102,7 @@ export const TASK_META: Record<TaskType, TaskMeta> = {
     hasPhoto: true,
     exportName: "结果",
   },
-  usb_copy: {
-    type: "usb_copy",
-    label: "USB拷录屏",
-    shortLabel: "录屏",
-    hasPhoto: false,
-    exportName: "录屏",
-  },
 };
 
-/** 单场考试内每病例的三类任务固定顺序 */
-export const TASK_ORDER: TaskType[] = ["face_screen", "result", "usb_copy"];
+/** 单场考试内每病例的任务固定顺序 */
+export const TASK_ORDER: TaskType[] = ["face_screen", "result"];

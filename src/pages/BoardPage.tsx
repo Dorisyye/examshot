@@ -117,7 +117,7 @@ export default function BoardPage() {
         });
         toast("已分享", "ok");
       } else {
-        // 降级：触发下载
+        // 降级：触发下载（浏览器不支持系统分享时）
         const url = URL.createObjectURL(result.blob);
         const a = document.createElement("a");
         a.href = url;
@@ -126,7 +126,7 @@ export default function BoardPage() {
         a.click();
         document.body.removeChild(a);
         setTimeout(() => URL.revokeObjectURL(url), 2000);
-        toast(`照片包已下载（${result.photoCount}张）`, "ok");
+        toast(`已开始下载，请到「下载」或「文件管理」中查找`, "info");
       }
     } catch (e) {
       if ((e as DOMException)?.name !== "AbortError") {
@@ -241,7 +241,13 @@ export default function BoardPage() {
               onClick={handleExportZip}
               disabled={zipping}
             >
-              {zipping ? "打包中…" : isAllDone ? "全部完成 · 导出照片包" : "导出照片包 · 分享/存文件"}
+              {zipping
+                ? "打包中…"
+                : isAllDone
+                  ? "全部完成 · 导出照片包"
+                  : (typeof navigator !== "undefined" && navigator.canShare?.({ files: [new File([""], "test.zip", { type: "application/zip" })] }))
+                    ? "导出照片包 · 分享/存文件"
+                    : "下载照片包"}
             </Button>
             <button
               onClick={() => navigate(`/sessions/${session.id}/export`)}

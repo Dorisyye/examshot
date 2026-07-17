@@ -6,7 +6,6 @@ import {
   Eye,
   ImageOff,
   RotateCcw,
-  Usb,
   UserSquare2,
   MonitorUp,
   Upload,
@@ -43,7 +42,6 @@ interface Props {
 const TASK_ICON: Record<TaskType, typeof Camera> = {
   face_screen: UserSquare2,
   result: MonitorUp,
-  usb_copy: Usb,
 };
 
 export default function TaskActionDrawer({ ctx, onClose }: Props) {
@@ -158,7 +156,11 @@ export default function TaskActionDrawer({ ctx, onClose }: Props) {
         deletePhoto(task.photoId).catch(() => {});
       }
       setTaskStatus(ctx.sessionId, candidate.id, caseIndex, taskType, "done", photoId);
-      toast(`${meta.label}已保存`, "ok");
+      if (!navigator.canShare?.({ files: [file] })) {
+        toast(`${meta.label}已保存 · 长按查看大图可存到相册`, "ok");
+      } else {
+        toast(`${meta.label}已保存`, "ok");
+      }
       onClose();
     } catch {
       toast("照片保存失败", "bad");
@@ -188,9 +190,8 @@ export default function TaskActionDrawer({ ctx, onClose }: Props) {
     });
   };
 
-  // 保存到手机相册：优先用 Web Share API（系统分享面板能正确处理中文文件名，可直接存到相册/微信）
-  // 不支持时降级到 <a download>（部分手机浏览器会忽略中文文件名）
-  // 文件名格式：人名_病种_过程或结果.jpg（避免非法字符）
+  // 保存到手机相册：优先 Web Share API（系统分享面板可直接存到相册/微信）
+  // 不支持时打开大图提示长按保存（比 <a download> 更靠谱，下载的文件在下载文件夹找不到）
   const handleSaveToAlbum = async () => {
     if (!task?.photoId) return;
     const rec = await getPhoto(task.photoId);
@@ -203,7 +204,6 @@ export default function TaskActionDrawer({ ctx, onClose }: Props) {
     const fileName = `${safeName}_${safeCase}_${meta.exportName}.jpg`;
     const file = new File([rec.blob], fileName, { type: "image/jpeg" });
 
-    // 优先 Web Share API Level 2
     if (navigator.canShare?.({ files: [file] })) {
       try {
         await navigator.share({ files: [file], title: fileName });
@@ -215,17 +215,9 @@ export default function TaskActionDrawer({ ctx, onClose }: Props) {
       return;
     }
 
-    // 降级：<a download>
-    const url = URL.createObjectURL(rec.blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 2000);
-    setTaskSavedToAlbum(ctx.sessionId, candidate.id, caseIndex, taskType, true);
-    toast(`已保存：${fileName}`, "ok");
+    // 降级：打开大图，提示长按保存（所有手机浏览器都支持）
+    setViewerOpen(true);
+    toast("长按图片即可保存到相册", "info");
   };
 
   return (
@@ -266,7 +258,11 @@ export default function TaskActionDrawer({ ctx, onClose }: Props) {
                   }
                   onClick={handleSaveToAlbum}
                 >
-                  {task.savedToAlbum ? "已保存到相册 · 再次保存" : "保存到相册"}
+                  {task.savedToAlbum
+                    ? "已保存到相册 · 再次保存"
+                    : (typeof navigator !== "undefined" && navigator.canShare?.({ files: [new File([""], "test.jpg", { type: "image/jpeg" })] }))
+                      ? "保存到相册"
+                      : "查看大图 · 长按存相册"}
                 </Button>
               )}
               <div className="flex gap-2">
@@ -379,19 +375,6 @@ export default function TaskActionDrawer({ ctx, onClose }: Props) {
             </div>
           )}
 
-          {/* USB 拷贝特殊提示 */}
-          {taskType === "usb_copy" && (
-            <div className={cn(
-              "mt-3 rounded-lg border px-3 py-2.5 text-xs",
-              caseMissing
-                ? "border-warn/40 bg-warn-soft/40 text-warn"
-                : "border-ink-border bg-ink-base text-type-secondary",
-            )}>
-              {caseMissing
-                ? "⚠ 该病例的「人脸+屏幕照」或「结果照」尚未完成，建议先补拍再拷录屏。"
-                : "拷完录屏后点击下方「标记已完成」。"}
-            </div>
-          )}
         </div>
       </Drawer>
 
@@ -416,17 +399,26 @@ export default function TaskActionDrawer({ ctx, onClose }: Props) {
       {/* 全屏看图 */}
       <FullScreenModal open={viewerOpen} dismissible onClose={() => setViewerOpen(false)}>
         {photoUrl && (
-          <div className="relative h-full w-full" onClick={() => setViewerOpen(false)}>
-            <img src={photoUrl} alt="照片" className="h-full w-full object-contain" />
-            <button
-              onClick={(e) => { e.stopPropagation(); setViewerOpen(false); }}
-              className="touchable absolute right-4 top-4 flex items-center justify-center rounded-full bg-black/60 text-white"
-              aria-label="关闭"
-            >
-              <X className="h-5 w-5" />
-            </button>
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1 text-center text-2xs text-white">
-              {candidate.name} · {ctx.caseName} · {meta.label}
+          <div className="relative flex h-full w-full flex-col" onClick={() => setViewerOpen(false)}>
+            <div className="flex items-center justify-between px-4 pt-4">
+              <div className="rounded-full bg-black/60 px-3 py-1 text-2xs text-white">
+                长按图片可保存到相册
+              </div>
+              <button
+                onClick={(e) => { e.stopPropagation(); setViewerOpen(false); }}
+                className="touchable flex items-center justify-center rounded-full bg-black/60 text-white"
+                aria-label="关闭"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <img src={photoUrl} alt="照片" className="h-full w-full object-contain" />
+            </div>
+            <div className="pb-6 text-center">
+              <span className="rounded-full bg-black/60 px-3 py-1 text-2xs text-white">
+                {candidate.name} · {ctx.caseName} · {meta.label}
+              </span>
             </div>
           </div>
         )}

@@ -44,7 +44,7 @@ function makeSession(
 function markDone(
   c: Candidate,
   caseIndex: number,
-  taskType: "face_screen" | "result" | "usb_copy",
+  taskType: "face_screen" | "result",
 ) {
   c.tasks = [
     ...c.tasks.filter(
@@ -62,34 +62,34 @@ describe("progress 基础计算", () => {
     expect(progressPct(s)).toBe(0);
   });
 
-  it("1 考生 2 病例（都已选）→ 总任务 6（1×2×3）", () => {
+  it("1 考生 2 病例（都已选）→ 总任务 4（1×2×2）", () => {
     const s = makeSession([makeCandidate()], 2);
-    expect(totalTasks(s)).toBe(6);
+    expect(totalTasks(s)).toBe(4);
   });
 
-  it("1 考生 3 病例（都已选）→ 总任务 9（1×3×3）", () => {
+  it("1 考生 3 病例（都已选）→ 总任务 6（1×3×2）", () => {
     const s = makeSession(
       [makeCandidate({ caseNames: ["AF", "AAFL", "AFL"] })],
       3,
     );
-    expect(totalTasks(s)).toBe(9);
+    expect(totalTasks(s)).toBe(6);
   });
 
-  it("2 考生 2 病例（都已选）→ 总任务 12（2×2×3）", () => {
+  it("2 考生 2 病例（都已选）→ 总任务 8（2×2×2）", () => {
     const s = makeSession(
       [makeCandidate({ id: "a" }), makeCandidate({ id: "b" })],
       2,
     );
-    expect(totalTasks(s)).toBe(12);
+    expect(totalTasks(s)).toBe(8);
   });
 
   it("完成率 = 完成/总 取整", () => {
     const c = makeCandidate();
     markDone(c, 0, "face_screen");
     const s = makeSession([c], 2);
-    // 1/6 ≈ 16.67 → 17
+    // 1/4 = 25
     expect(doneTasks(s)).toBe(1);
-    expect(progressPct(s)).toBe(17);
+    expect(progressPct(s)).toBe(25);
   });
 });
 
@@ -104,19 +104,19 @@ describe("isCaseSelected 病种未选不计入", () => {
     expect(progressPct(s)).toBe(0);
   });
 
-  it("只选了 1 个病种 → 总任务 3（1×3）", () => {
+  it("只选了 1 个病种 → 总任务 2（1×2）", () => {
     const c = makeCandidate({ caseNames: ["AF", ""] });
     const s = makeSession([c], 2);
     expect(isCaseSelected(c, 0)).toBe(true);
     expect(isCaseSelected(c, 1)).toBe(false);
-    expect(totalTasks(s)).toBe(3);
+    expect(totalTasks(s)).toBe(2);
   });
 
   it("不同考生可选不同数量病种", () => {
-    const c1 = makeCandidate({ id: "a", caseNames: ["AF", "AAFL"] }); // 6
-    const c2 = makeCandidate({ id: "b", caseNames: ["PVC", ""] }); // 3
+    const c1 = makeCandidate({ id: "a", caseNames: ["AF", "AAFL"] }); // 4
+    const c2 = makeCandidate({ id: "b", caseNames: ["PVC", ""] }); // 2
     const s = makeSession([c1, c2], 2);
-    expect(totalTasks(s)).toBe(9);
+    expect(totalTasks(s)).toBe(6);
   });
 
   it("未选病种位上即便标记了 done，doneTasks 也不计", () => {
@@ -127,9 +127,8 @@ describe("isCaseSelected 病种未选不计入", () => {
     expect(doneTasks(s)).toBe(0);
   });
 
-  it("未选病种位不参与漏拍检测", () => {
+  it("未选病种位不参与未拍统计", () => {
     const c = makeCandidate({ caseNames: ["", ""] });
-    markDone(c, 0, "usb_copy"); // 若未选应不计漏拍
     const s = makeSession([c], 2);
     expect(missingCount(s)).toBe(0);
   });
@@ -151,7 +150,7 @@ describe("findTask", () => {
 });
 
 describe("未拍照片数 missingCount / isCaseMissing", () => {
-  it("face_screen 已拍、result 未拍 → 未拍 1", () => {
+  it("face_screen 已拍、result 未拍 → 未拍 3", () => {
     const c = makeCandidate();
     markDone(c, 0, "face_screen");
     const s = makeSession([c]);
@@ -159,7 +158,7 @@ describe("未拍照片数 missingCount / isCaseMissing", () => {
     expect(isCaseMissing(c, 0)).toBe(true);
   });
 
-  it("face_screen 和 result 都未拍 → 未拍 2", () => {
+  it("face_screen 和 result 都未拍 → 未拍 4", () => {
     const c = makeCandidate();
     const s = makeSession([c]);
     expect(missingCount(s)).toBe(4); // 2病例 × 2照片 = 4
@@ -175,18 +174,6 @@ describe("未拍照片数 missingCount / isCaseMissing", () => {
     const s = makeSession([c]);
     expect(missingCount(s)).toBe(0);
     expect(isCaseMissing(c, 0)).toBe(false);
-  });
-
-  it("USB 是否完成不影响未拍照片统计", () => {
-    const c = makeCandidate();
-    markDone(c, 0, "usb_copy");
-    markDone(c, 0, "face_screen");
-    markDone(c, 0, "result");
-    // 病例1 face+result 都没拍
-    const s = makeSession([c]);
-    expect(missingCount(s)).toBe(2);
-    expect(isCaseMissing(c, 0)).toBe(false);
-    expect(isCaseMissing(c, 1)).toBe(true);
   });
 
   it("多考生多病例累加未拍照片数", () => {
@@ -208,7 +195,6 @@ describe("isCandidateComplete", () => {
     for (let i = 0; i < 2; i++) {
       markDone(c, i, "face_screen");
       markDone(c, i, "result");
-      markDone(c, i, "usb_copy");
     }
     expect(isCandidateComplete(c, 2)).toBe(true);
   });
@@ -217,7 +203,6 @@ describe("isCandidateComplete", () => {
     const c = makeCandidate();
     markDone(c, 0, "face_screen");
     markDone(c, 0, "result");
-    markDone(c, 0, "usb_copy");
     // 病例1 全缺
     expect(isCandidateComplete(c, 2)).toBe(false);
   });

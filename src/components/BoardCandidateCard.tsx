@@ -1,5 +1,5 @@
 import { memo, useEffect, useState } from "react";
-import { Check, Circle, MonitorUp, Usb, UserSquare2, AlertTriangle, Image as ImageIcon, Tag, Download } from "lucide-react";
+import { Check, Circle, MonitorUp, UserSquare2, AlertTriangle, Image as ImageIcon, Tag, Download } from "lucide-react";
 import type { Candidate, Session, TaskType } from "@/types";
 import { TASK_META, TASK_ORDER } from "@/types";
 import type { TaskContext } from "@/components/TaskActionDrawer";
@@ -18,7 +18,6 @@ import { cn } from "@/lib/utils";
 const TASK_ICON: Record<TaskType, typeof Check> = {
   face_screen: UserSquare2,
   result: MonitorUp,
-  usb_copy: Usb,
 };
 
 interface Props {

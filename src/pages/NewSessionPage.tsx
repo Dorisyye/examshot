@@ -115,7 +115,7 @@ export default function NewSessionPage() {
             ))}
           </div>
           <p className="mt-1.5 text-2xs text-type-muted">
-            每位考生需跑 {caseCount} 个病例，每个病例 3 项拍摄任务（人脸屏照 / 结果照 / USB拷录屏）。
+            每位考生需跑 {caseCount} 个病例，每个病例 2 项拍照任务（人脸+屏幕照 / 结果照）。
           </p>
         </div>
 
