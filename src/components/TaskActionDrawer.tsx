@@ -23,6 +23,7 @@ import CameraCapture from "@/components/CameraCapture";
 import { FullScreenModal } from "@/components/FullScreenModal";
 import { getPhoto, savePhoto, deletePhoto } from "@/lib/photoDb";
 import { findTask, fmtTime, isCaseMissing } from "@/lib/progress";
+import { compressImageBlob } from "@/lib/imageCompress";
 import { v4 as uuid } from "uuid";
 import { cn } from "@/lib/utils";
 
@@ -114,7 +115,9 @@ export default function TaskActionDrawer({ ctx, onClose }: Props) {
       toast("请选择图片文件", "warn");
       return;
     }
-    await saveAndMark(file);
+    // 压缩：避免相册原图过大导致存储/下载慢
+    const compressed = await compressImageBlob(file);
+    await saveAndMark(compressed ?? file);
   };
 
   // 共用：保存照片 blob 并标记任务完成
@@ -167,7 +170,8 @@ export default function TaskActionDrawer({ ctx, onClose }: Props) {
     });
   };
 
-  // 保存到手机相册：通过 <a download> 触发下载，手机浏览器会询问"存储图像"
+  // 保存到手机相册：优先用 Web Share API（系统分享面板能正确处理中文文件名，可直接存到相册/微信）
+  // 不支持时降级到 <a download>（部分手机浏览器会忽略中文文件名）
   // 文件名格式：人名_病种_过程或结果.jpg（避免非法字符）
   const handleSaveToAlbum = async () => {
     if (!task?.photoId) return;
@@ -179,6 +183,21 @@ export default function TaskActionDrawer({ ctx, onClose }: Props) {
     const safeName = (candidate.name || "未命名").replace(/[\\/:*?"<>|]/g, "_");
     const safeCase = (ctx.caseName || "未选").replace(/[\\/:*?"<>|]/g, "_");
     const fileName = `${safeName}_${safeCase}_${meta.exportName}.jpg`;
+    const file = new File([rec.blob], fileName, { type: "image/jpeg" });
+
+    // 优先 Web Share API Level 2
+    if (navigator.canShare?.({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: fileName });
+        setTaskSavedToAlbum(ctx.sessionId, candidate.id, caseIndex, taskType, true);
+        toast("已保存到相册", "ok");
+      } catch (e) {
+        // 用户取消或失败，不报错
+      }
+      return;
+    }
+
+    // 降级：<a download>
     const url = URL.createObjectURL(rec.blob);
     const a = document.createElement("a");
     a.href = url;
@@ -188,7 +207,7 @@ export default function TaskActionDrawer({ ctx, onClose }: Props) {
     document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 2000);
     setTaskSavedToAlbum(ctx.sessionId, candidate.id, caseIndex, taskType, true);
-    toast(`已保存到相册：${fileName}`, "ok");
+    toast(`已保存：${fileName}`, "ok");
   };
 
   return (

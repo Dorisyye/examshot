@@ -106,9 +106,15 @@ export default function CameraCapture({
   const handleShoot = () => {
     const video = videoRef.current;
     if (!video || !video.videoWidth) return;
+    // 压缩：长边限制 1280px，避免手机原图过大导致存储/下载慢
+    const MAX_LONG = 1280;
+    const vw = video.videoWidth;
+    const vh = video.videoHeight;
+    const longSide = Math.max(vw, vh);
+    const scale = longSide > MAX_LONG ? MAX_LONG / longSide : 1;
     const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    canvas.width = Math.round(vw * scale);
+    canvas.height = Math.round(vh * scale);
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -125,7 +131,7 @@ export default function CameraCapture({
         setPreviewUrl(URL.createObjectURL(blob));
       },
       "image/jpeg",
-      0.85,
+      0.8,
     );
   };
 
