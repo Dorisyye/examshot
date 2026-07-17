@@ -118,7 +118,7 @@ export default function BoardPage() {
                     <span
                       className={cn(
                         "tnum text-2xl font-bold leading-none",
-                        isAllDone ? "text-ok" : stats.missing > 0 ? "text-bad" : "text-info",
+                        isAllDone ? "text-ok" : stats.missing > 0 ? "text-warn" : "text-info",
                       )}
                     >
                       {stats.done}
@@ -134,7 +134,7 @@ export default function BoardPage() {
                 <div className="min-w-0 flex-1">
                   <ProgressBar
                     value={stats.pct}
-                    tone={isAllDone ? "ok" : stats.missing > 0 ? "bad" : "info"}
+                    tone={isAllDone ? "ok" : stats.missing > 0 ? "warn" : "info"}
                     showGlow={isAllDone}
                   />
                   <div className="mt-1 flex items-center justify-between">
@@ -142,9 +142,9 @@ export default function BoardPage() {
                       {stats.pct}%
                     </span>
                     {stats.missing > 0 ? (
-                      <span className="inline-flex items-center gap-1 rounded bg-bad-soft px-1.5 py-0.5 text-2xs font-semibold text-bad">
+                      <span className="inline-flex items-center gap-1 rounded bg-warn-soft px-1.5 py-0.5 text-2xs font-semibold text-warn">
                         <AlertTriangle className="h-2.5 w-2.5" />
-                        {stats.missing} 漏拍
+                        {stats.missing} 张未拍
                       </span>
                     ) : isAllDone ? (
                       <span className="text-2xs font-semibold text-ok">全部完成</span>

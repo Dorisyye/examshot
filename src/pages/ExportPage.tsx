@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Check, Download, FileDown, FolderArchive, Image as ImageIcon, Loader2, Share2, X } from "lucide-react";
+import { AlertTriangle, Check, Download, FileDown, FolderArchive, Image as ImageIcon, Loader2, Share2, X } from "lucide-react";
 import { useSessionStore } from "@/store/sessionStore";
 import { useToast } from "@/store/toastStore";
 import { AppShell, TopBar } from "@/components/AppShell";
@@ -84,7 +84,7 @@ export default function ExportPage() {
       ...TASK_ORDER.map((t) => TASK_META[t].label + "_状态"),
       ...TASK_ORDER.map((t) => TASK_META[t].label + "_时间"),
       ...TASK_ORDER.map((t) => TASK_META[t].label + "_有照片"),
-      "该病例漏拍",
+      "该病例未拍照片",
     ];
     const lines: string[] = [headers.join(",")];
     for (const r of rows) {
@@ -250,17 +250,17 @@ export default function ExportPage() {
             tone="info"
           />
           <StatCard
-            label="漏拍"
+            label="未拍照片"
             value={missing}
-            tone={missing > 0 ? "bad" : "ok"}
+            tone={missing > 0 ? "warn" : "ok"}
           />
         </div>
 
         {missing > 0 && (
-          <div className="mb-4 flex items-start gap-2 rounded-lg border border-bad/30 bg-bad-soft/30 px-3 py-2.5">
-            <X className="mt-0.5 h-4 w-4 shrink-0 text-bad" />
-            <p className="text-xs text-bad">
-              仍有 {missing} 项漏拍（USB拷贝已完成但前面的拍摄任务未完成）。建议回看板补拍。
+          <div className="mb-4 flex items-start gap-2 rounded-lg border border-warn/30 bg-warn-soft/30 px-3 py-2.5">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warn" />
+            <p className="text-xs text-warn">
+              仍有 {missing} 张照片未拍（人脸+屏幕照 / 结果照）。建议回看板补拍后再导出。
             </p>
           </div>
         )}
@@ -311,7 +311,7 @@ export default function ExportPage() {
                 className={cn(
                   "grid grid-cols-[1.4fr_0.6fr_repeat(3,1fr)] items-center px-3 py-2.5 text-xs",
                   idx % 2 === 0 ? "bg-ink-surface" : "bg-ink-base",
-                  r.caseMissing && "bg-bad-soft/20",
+                  r.caseMissing && "bg-warn-soft/20",
                 )}
               >
                 <div className="min-w-0">
@@ -346,8 +346,8 @@ export default function ExportPage() {
                         {t.hasPhoto && <ImageIcon className="h-2.5 w-2.5" />}
                       </button>
                     ) : t.missing ? (
-                      <span className="inline-flex items-center rounded bg-bad-soft px-1.5 py-0.5 text-2xs font-bold text-bad">
-                        漏
+                      <span className="inline-flex items-center rounded bg-warn-soft px-1.5 py-0.5 text-2xs font-bold text-warn">
+                        未拍
                       </span>
                     ) : (
                       <span className="text-type-muted">—</span>
@@ -402,14 +402,14 @@ function StatCard({
 }: {
   label: string;
   value: number;
-  tone: "ok" | "bad" | "info";
+  tone: "ok" | "bad" | "warn" | "info";
 }) {
   return (
     <div className="rounded-lg border border-ink-border bg-ink-surface px-3 py-2.5 text-center">
       <div
         className={cn(
           "tnum text-xl font-bold leading-none",
-          tone === "ok" ? "text-ok" : tone === "bad" ? "text-bad" : "text-info",
+          tone === "ok" ? "text-ok" : tone === "bad" ? "text-bad" : tone === "warn" ? "text-warn" : "text-info",
         )}
       >
         {value}

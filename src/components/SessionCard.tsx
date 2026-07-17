@@ -83,7 +83,7 @@ export default function SessionCard({ session }: SessionCardProps) {
         <div
           className={cn(
             "absolute inset-y-0 left-0 w-1",
-            isDone ? "bg-ok" : missing > 0 ? "bg-bad" : "bg-info",
+            isDone ? "bg-ok" : missing > 0 ? "bg-warn" : "bg-info",
           )}
         />
 
@@ -115,7 +115,7 @@ export default function SessionCard({ session }: SessionCardProps) {
             <div
               className={cn(
                 "tnum text-2xl font-bold leading-none",
-                isDone ? "text-ok" : missing > 0 ? "text-bad" : "text-info",
+                isDone ? "text-ok" : missing > 0 ? "text-warn" : "text-info",
               )}
             >
               {pct}
@@ -130,15 +130,15 @@ export default function SessionCard({ session }: SessionCardProps) {
         <div className="mt-3 pl-2">
           <ProgressBar
             value={pct}
-            tone={isDone ? "ok" : missing > 0 ? "bad" : "info"}
+            tone={isDone ? "ok" : missing > 0 ? "warn" : "info"}
             showGlow={isDone}
           />
           <div className="mt-2 flex items-center justify-between">
             <div className="flex items-center gap-1.5">
               {missing > 0 ? (
-                <Badge tone="bad">
+                <Badge tone="warn">
                   <AlertTriangle className="h-2.5 w-2.5" />
-                  {missing} 漏拍
+                  {missing} 张未拍
                 </Badge>
               ) : isDone ? (
                 <Badge tone="ok">完成</Badge>

@@ -310,7 +310,7 @@ export default function TaskActionDrawer({ ctx, onClose }: Props) {
             {isDone ? (
               <Badge tone="ok">已完成 · {fmtTime(task?.completedAt)}</Badge>
             ) : caseMissing ? (
-              <Badge tone="bad">漏拍预警</Badge>
+              <Badge tone="warn">还有照片未拍</Badge>
             ) : (
               <Badge tone="warn">待完成</Badge>
             )}
@@ -366,7 +366,7 @@ export default function TaskActionDrawer({ ctx, onClose }: Props) {
             <div className={cn(
               "mt-3 rounded-lg border px-3 py-2.5 text-xs",
               caseMissing
-                ? "border-bad/40 bg-bad-soft/40 text-bad"
+                ? "border-warn/40 bg-warn-soft/40 text-warn"
                 : "border-ink-border bg-ink-base text-type-secondary",
             )}>
               {caseMissing

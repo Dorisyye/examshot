@@ -50,16 +50,13 @@ export function doneTasks(session: Session): number {
 }
 
 /**
- * 漏拍检测：若某考生某病例的 usb_copy 已完成
- * 但其 face_screen 或 result 未完成，则计为 1 个漏拍
+ * 未拍照片数：统计已选病种中 face_screen 和 result 尚未完成的数量（不含 USB 拷贝）
  */
 export function missingCount(session: Session): number {
   let n = 0;
   for (const c of session.candidates) {
     for (let i = 0; i < session.caseCount; i++) {
       if (!isCaseSelected(c, i)) continue;
-      const usbDone = isTaskDone(c, i, "usb_copy");
-      if (!usbDone) continue;
       if (!isTaskDone(c, i, "face_screen")) n++;
       if (!isTaskDone(c, i, "result")) n++;
     }
@@ -67,12 +64,12 @@ export function missingCount(session: Session): number {
   return n;
 }
 
-/** 某考生某病例是否处于"漏拍"状态（usb已done但前面缺） */
+/** 某考生某病例是否有未拍的照片（face_screen 或 result 未完成） */
 export function isCaseMissing(
   candidate: Candidate,
   caseIndex: number,
 ): boolean {
-  if (!isTaskDone(candidate, caseIndex, "usb_copy")) return false;
+  if (!isCaseSelected(candidate, caseIndex)) return false;
   return (
     !isTaskDone(candidate, caseIndex, "face_screen") ||
     !isTaskDone(candidate, caseIndex, "result")

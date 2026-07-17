@@ -131,7 +131,7 @@ function BoardCandidateCardImpl({ candidate, session, onTaskClick, onCaseSelectC
                   <Tag className="h-3 w-3 shrink-0" />
                 </button>
                 {missing && (
-                  <AlertTriangle className="h-3 w-3 shrink-0 text-bad" strokeWidth={2.5} />
+                  <AlertTriangle className="h-3 w-3 shrink-0 text-warn" strokeWidth={2.5} />
                 )}
               </div>
               <div className="flex flex-col gap-1">
@@ -207,7 +207,7 @@ function TaskButton({ taskType, done, missing, time, hasPhoto, savedToAlbum, onC
         done
           ? "border-ok/30 bg-ok-soft/40"
           : missing
-            ? "border-bad/50 bg-bad-soft/30 animate-pulse-fast"
+            ? "border-warn/50 bg-warn-soft/30 animate-pulse-fast"
             : "border-ink-border bg-ink-base hover:border-type-muted",
       )}
     >

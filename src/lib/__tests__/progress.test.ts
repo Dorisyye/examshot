@@ -150,52 +150,55 @@ describe("findTask", () => {
   });
 });
 
-describe("漏拍检测 missingCount / isCaseMissing", () => {
-  it("usb_copy 未完成时不计漏拍", () => {
+describe("未拍照片数 missingCount / isCaseMissing", () => {
+  it("face_screen 已拍、result 未拍 → 未拍 1", () => {
     const c = makeCandidate();
     markDone(c, 0, "face_screen");
-    // result 和 usb_copy 未完成
     const s = makeSession([c]);
-    expect(missingCount(s)).toBe(0);
-    expect(isCaseMissing(c, 0)).toBe(false);
-  });
-
-  it("usb_copy 完成但 face_screen 缺 → 漏拍 1", () => {
-    const c = makeCandidate();
-    markDone(c, 0, "result");
-    markDone(c, 0, "usb_copy");
-    // face_screen 缺
-    const s = makeSession([c]);
-    expect(missingCount(s)).toBe(1);
+    expect(missingCount(s)).toBe(3); // 病例0缺result(1) + 病例1缺face+result(2) = 3
     expect(isCaseMissing(c, 0)).toBe(true);
   });
 
-  it("usb_copy 完成但 result 缺 → 漏拍 1", () => {
+  it("face_screen 和 result 都未拍 → 未拍 2", () => {
     const c = makeCandidate();
-    markDone(c, 0, "face_screen");
-    markDone(c, 0, "usb_copy");
     const s = makeSession([c]);
-    expect(missingCount(s)).toBe(1);
+    expect(missingCount(s)).toBe(4); // 2病例 × 2照片 = 4
+    expect(isCaseMissing(c, 0)).toBe(true);
   });
 
-  it("usb_copy 完成且 face_screen+result 都完成 → 不漏拍", () => {
+  it("face_screen 和 result 都已拍 → 未拍 0", () => {
     const c = makeCandidate();
     markDone(c, 0, "face_screen");
     markDone(c, 0, "result");
-    markDone(c, 0, "usb_copy");
+    markDone(c, 1, "face_screen");
+    markDone(c, 1, "result");
     const s = makeSession([c]);
     expect(missingCount(s)).toBe(0);
     expect(isCaseMissing(c, 0)).toBe(false);
   });
 
-  it("多考生多病例累加漏拍数", () => {
+  it("USB 是否完成不影响未拍照片统计", () => {
+    const c = makeCandidate();
+    markDone(c, 0, "usb_copy");
+    markDone(c, 0, "face_screen");
+    markDone(c, 0, "result");
+    // 病例1 face+result 都没拍
+    const s = makeSession([c]);
+    expect(missingCount(s)).toBe(2);
+    expect(isCaseMissing(c, 0)).toBe(false);
+    expect(isCaseMissing(c, 1)).toBe(true);
+  });
+
+  it("多考生多病例累加未拍照片数", () => {
     const c1 = makeCandidate({ id: "c1" });
-    markDone(c1, 0, "usb_copy"); // 病例0 缺 face+result → 2 漏拍
+    markDone(c1, 0, "face_screen");
+    markDone(c1, 0, "result");
+    // c1 病例1 缺 face+result → 2
     const c2 = makeCandidate({ id: "c2" });
-    markDone(c2, 1, "usb_copy");
-    markDone(c2, 1, "face_screen"); // 病例1 缺 result → 1 漏拍
+    markDone(c2, 1, "face_screen");
+    // c2 病例0 缺 face+result(2) + 病例1 缺 result(1) → 3
     const s = makeSession([c1, c2], 2);
-    expect(missingCount(s)).toBe(3);
+    expect(missingCount(s)).toBe(5); // 2 + 3 = 5
   });
 });
 
