@@ -1,5 +1,5 @@
 import { memo, useEffect, useState } from "react";
-import { Check, Circle, MonitorUp, Usb, UserSquare2, AlertTriangle, Image as ImageIcon, Tag } from "lucide-react";
+import { Check, Circle, MonitorUp, Usb, UserSquare2, AlertTriangle, Image as ImageIcon, Tag, Download } from "lucide-react";
 import type { Candidate, Session, TaskType } from "@/types";
 import { TASK_META, TASK_ORDER } from "@/types";
 import type { TaskContext } from "@/components/TaskActionDrawer";
@@ -147,6 +147,7 @@ function BoardCandidateCardImpl({ candidate, session, onTaskClick, onCaseSelectC
                       missing={isMissing}
                       time={task?.completedAt}
                       hasPhoto={!!task?.photoId}
+                      savedToAlbum={!!task?.savedToAlbum}
                       onClick={() =>
                         onTaskClick({
                           sessionId: session.id,
@@ -192,9 +193,10 @@ interface TaskButtonProps {
   missing: boolean;
   time?: number;
   hasPhoto?: boolean;
+  savedToAlbum?: boolean;
   onClick: () => void;
 }
-function TaskButton({ taskType, done, missing, time, hasPhoto, onClick }: TaskButtonProps) {
+function TaskButton({ taskType, done, missing, time, hasPhoto, savedToAlbum, onClick }: TaskButtonProps) {
   const Icon = TASK_ICON[taskType];
   const meta = TASK_META[taskType];
   return (
@@ -229,7 +231,10 @@ function TaskButton({ taskType, done, missing, time, hasPhoto, onClick }: TaskBu
       >
         {meta.shortLabel}
       </span>
-      {hasPhoto && (
+      {savedToAlbum && (
+        <Download className="h-3 w-3 shrink-0 text-ok" aria-label="已存到相册" strokeWidth={2.5} />
+      )}
+      {hasPhoto && !savedToAlbum && (
         <ImageIcon className="h-3 w-3 shrink-0 text-info" aria-label="有照片" />
       )}
       <span

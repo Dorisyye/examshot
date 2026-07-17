@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   Camera,
   Check,
+  Download,
   Eye,
   ImageOff,
   RotateCcw,
@@ -46,6 +47,7 @@ const TASK_ICON: Record<TaskType, typeof Camera> = {
 
 export default function TaskActionDrawer({ ctx, onClose }: Props) {
   const setTaskStatus = useSessionStore((s) => s.setTaskStatus);
+  const setTaskSavedToAlbum = useSessionStore((s) => s.setTaskSavedToAlbum);
   const toast = useToast();
   const confirm = useConfirm();
 
@@ -165,6 +167,30 @@ export default function TaskActionDrawer({ ctx, onClose }: Props) {
     });
   };
 
+  // 保存到手机相册：通过 <a download> 触发下载，手机浏览器会询问"存储图像"
+  // 文件名格式：人名_病种_过程或结果.jpg（避免非法字符）
+  const handleSaveToAlbum = async () => {
+    if (!task?.photoId) return;
+    const rec = await getPhoto(task.photoId);
+    if (!rec) {
+      toast("照片加载失败，无法保存", "bad");
+      return;
+    }
+    const safeName = (candidate.name || "未命名").replace(/[\\/:*?"<>|]/g, "_");
+    const safeCase = (ctx.caseName || "未选").replace(/[\\/:*?"<>|]/g, "_");
+    const fileName = `${safeName}_${safeCase}_${meta.exportName}.jpg`;
+    const url = URL.createObjectURL(rec.blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    setTaskSavedToAlbum(ctx.sessionId, candidate.id, caseIndex, taskType, true);
+    toast(`已保存到相册：${fileName}`, "ok");
+  };
+
   return (
     <>
       <Drawer
@@ -188,15 +214,34 @@ export default function TaskActionDrawer({ ctx, onClose }: Props) {
         }
         footer={
           isDone ? (
-            <div className="flex gap-2 pb-1">
-              <Button variant="ghost" block icon={<RotateCcw className="h-4 w-4" />} onClick={handleUnmark}>
-                取消标记
-              </Button>
-              {meta.hasPhoto && photoUrl && (
-                <Button variant="outline" block icon={<Eye className="h-4 w-4" />} onClick={() => setViewerOpen(true)}>
-                  查看照片
+            <div className="flex flex-col gap-2 pb-1">
+              {meta.hasPhoto && task?.photoId && (
+                <Button
+                  variant={task.savedToAlbum ? "ok" : "primary"}
+                  size="lg"
+                  block
+                  icon={
+                    task.savedToAlbum ? (
+                      <Check className="h-5 w-5" />
+                    ) : (
+                      <Download className="h-5 w-5" />
+                    )
+                  }
+                  onClick={handleSaveToAlbum}
+                >
+                  {task.savedToAlbum ? "已保存到相册 · 再次保存" : "保存到相册"}
                 </Button>
               )}
+              <div className="flex gap-2">
+                {meta.hasPhoto && photoUrl && (
+                  <Button variant="outline" block icon={<Eye className="h-4 w-4" />} onClick={() => setViewerOpen(true)}>
+                    查看照片
+                  </Button>
+                )}
+                <Button variant="ghost" block icon={<RotateCcw className="h-4 w-4" />} onClick={handleUnmark}>
+                  取消标记
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="pb-1">
@@ -261,6 +306,12 @@ export default function TaskActionDrawer({ ctx, onClose }: Props) {
                 </span>
                 {photoUrl && !isDone && (
                   <span className="text-2xs text-warn">已拍但未标记</span>
+                )}
+                {photoUrl && isDone && task?.savedToAlbum && (
+                  <span className="inline-flex items-center gap-0.5 text-2xs text-ok">
+                    <Check className="h-3 w-3" strokeWidth={3} />
+                    已存到相册
+                  </span>
                 )}
               </div>
               {photoLoading ? (

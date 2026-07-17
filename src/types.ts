@@ -13,6 +13,8 @@ export interface TaskRecord {
   status: TaskStatus;
   completedAt?: number; // timestamp
   photoId?: string; // 指向 IndexedDB 中的照片（仅 face_screen / result 可有）
+  /** 该照片是否已保存到手机相册（监考员点击「保存到相册」后置 true） */
+  savedToAlbum?: boolean;
 }
 
 /** 考生 */

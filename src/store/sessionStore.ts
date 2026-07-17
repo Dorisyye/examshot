@@ -42,6 +42,15 @@ interface SessionStore {
     photoId?: string,
   ) => void;
 
+  /** 标记某任务的照片已保存到手机相册（或取消标记） */
+  setTaskSavedToAlbum: (
+    sessionId: string,
+    candidateId: string,
+    caseIndex: number,
+    taskType: TaskType,
+    saved: boolean,
+  ) => void;
+
   /** 设置某考生某病种位的名称（进场时逐人选择） */
   setCandidateCaseName: (
     sessionId: string,
@@ -176,16 +185,23 @@ export const useSessionStore = create<SessionStore>()(
                 const idx = c.tasks.findIndex(
                   (t) => t.caseIndex === caseIndex && t.taskType === taskType,
                 );
+                const prev = idx >= 0 ? c.tasks[idx] : undefined;
                 const next: TaskRecord = {
                   caseIndex,
                   taskType,
                   status,
                   completedAt: status === "done" ? Date.now() : undefined,
-                  photoId: photoId ?? (idx >= 0 ? c.tasks[idx].photoId : undefined),
+                  photoId: photoId ?? prev?.photoId,
                 };
-                // 取消标记且无 photoId 时，清掉 photoId
+                // 取消标记时清掉 photoId 和 savedToAlbum
                 if (status === "pending") {
                   next.photoId = undefined;
+                  next.savedToAlbum = undefined;
+                } else if (photoId && photoId !== prev?.photoId) {
+                  // 新拍了照片（photoId 变了），重置相册标记
+                  next.savedToAlbum = undefined;
+                } else {
+                  next.savedToAlbum = prev?.savedToAlbum;
                 }
                 if (idx >= 0) {
                   const tasks = [...c.tasks];
@@ -193,6 +209,30 @@ export const useSessionStore = create<SessionStore>()(
                   return { ...c, tasks };
                 }
                 return { ...c, tasks: [...c.tasks, next] };
+              }),
+            };
+          }),
+        }));
+      },
+
+      setTaskSavedToAlbum: (sessionId, candidateId, caseIndex, taskType, saved) => {
+        set((s) => ({
+          sessions: s.sessions.map((sess) => {
+            if (sess.id !== sessionId) return sess;
+            return {
+              ...sess,
+              candidates: sess.candidates.map((c) => {
+                if (c.id !== candidateId) return c;
+                const idx = c.tasks.findIndex(
+                  (t) => t.caseIndex === caseIndex && t.taskType === taskType,
+                );
+                if (idx < 0) return c;
+                const tasks = [...c.tasks];
+                tasks[idx] = {
+                  ...tasks[idx],
+                  savedToAlbum: saved ? true : undefined,
+                };
+                return { ...c, tasks };
               }),
             };
           }),
@@ -256,7 +296,7 @@ export const useSessionStore = create<SessionStore>()(
     }),
     {
       name: "examshot:sessions",
-      version: 2,
+      version: 3,
       partialize: (s) => ({ sessions: s.sessions, initialized: s.initialized }),
       migrate: (persisted: any, fromVersion: number) => {
         // v1 -> v2: 给每位考生补 caseNames 字段（用场次级 caseNames 兜底）
@@ -271,6 +311,7 @@ export const useSessionStore = create<SessionStore>()(
             })),
           }));
         }
+        // v2 -> v3: 无需结构变更，savedToAlbum 为新增 optional 字段
         return persisted;
       },
     },
