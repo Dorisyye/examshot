@@ -120,10 +120,28 @@ export default function TaskActionDrawer({ ctx, onClose }: Props) {
     await saveAndMark(compressed ?? file);
   };
 
-  // 共用：保存照片 blob 并标记任务完成
+  // 共用：保存照片 blob 并标记任务完成，同时自动保存到系统相册
   const saveAndMark = async (blob: Blob) => {
     const photoId = uuid();
     try {
+      // 生成文件名，用于保存到相册
+      const safeName = (candidate.name || "未命名").replace(/[\\/:*?"<>|]/g, "_");
+      const safeCase = (ctx.caseName || "未选").replace(/[\\/:*?"<>|]/g, "_");
+      const fileName = `${safeName}_${safeCase}_${meta.exportName}.jpg`;
+      const file = new File([blob], fileName, { type: "image/jpeg" });
+
+      // 自动保存到系统相册（利用用户手势上下文，先触发分享再存 IndexedDB）
+      if (navigator.canShare?.({ files: [file] })) {
+        navigator
+          .share({ files: [file], title: fileName })
+          .then(() => {
+            setTaskSavedToAlbum(ctx.sessionId, candidate.id, caseIndex, taskType, true);
+          })
+          .catch(() => {
+            // 用户取消或失败，不影响保存到 IndexedDB
+          });
+      }
+
       await savePhoto({
         id: photoId,
         blob,
@@ -140,7 +158,7 @@ export default function TaskActionDrawer({ ctx, onClose }: Props) {
         deletePhoto(task.photoId).catch(() => {});
       }
       setTaskStatus(ctx.sessionId, candidate.id, caseIndex, taskType, "done", photoId);
-      toast(`${meta.label}已保存并标记完成`, "ok");
+      toast(`${meta.label}已保存`, "ok");
       onClose();
     } catch {
       toast("照片保存失败", "bad");

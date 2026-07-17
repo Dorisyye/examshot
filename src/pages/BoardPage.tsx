@@ -3,8 +3,11 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   AlertTriangle,
   Download,
+  FolderArchive,
+  Loader2,
   Plus,
   Search,
+  Share2,
 } from "lucide-react";
 import { useSessionStore } from "@/store/sessionStore";
 import { useToast } from "@/store/toastStore";
@@ -14,6 +17,7 @@ import { Drawer } from "@/components/Drawer";
 import BoardCandidateCard from "@/components/BoardCandidateCard";
 import TaskActionDrawer, { type TaskContext } from "@/components/TaskActionDrawer";
 import CaseSelectDrawer, { type CaseSelectContext } from "@/components/CaseSelectDrawer";
+import { buildPhotoZip } from "@/lib/photoZip";
 import {
   doneTasks,
   missingCount,
@@ -36,6 +40,7 @@ export default function BoardPage() {
   const [newExam, setNewExam] = useState("");
   const [newSeat, setNewSeat] = useState("");
   const [query, setQuery] = useState("");
+  const [zipping, setZipping] = useState(false);
 
   const stats = useMemo(() => {
     if (!session) return { done: 0, total: 0, pct: 0, missing: 0 };
@@ -92,6 +97,45 @@ export default function BoardPage() {
   };
 
   const isAllDone = stats.total > 0 && stats.done === stats.total;
+
+  // 一键导出照片包并分享（不用跳到导出页）
+  const handleExportZip = async () => {
+    if (!session) return;
+    setZipping(true);
+    try {
+      const result = await buildPhotoZip(session);
+      if (result.photoCount === 0) {
+        toast("还没有可导出的照片", "warn");
+        return;
+      }
+      const file = new File([result.blob], result.fileName, { type: "application/zip" });
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: result.fileName,
+          text: `监考照片包（${result.photoCount}张）`,
+        });
+        toast("已分享", "ok");
+      } else {
+        // 降级：触发下载
+        const url = URL.createObjectURL(result.blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = result.fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+        toast(`照片包已下载（${result.photoCount}张）`, "ok");
+      }
+    } catch (e) {
+      if ((e as DOMException)?.name !== "AbortError") {
+        toast("照片包生成失败", "bad");
+      }
+    } finally {
+      setZipping(false);
+    }
+  };
 
   return (
     <AppShell
@@ -181,17 +225,30 @@ export default function BoardPage() {
         />
       }
       bottomBar={
-        isAllDone ? (
-          <div className="px-4 py-3">
+        session.candidates.length > 0 ? (
+          <div className="flex flex-col gap-2 px-4 py-3">
             <Button
-              variant="ok"
+              variant={isAllDone ? "ok" : "primary"}
               size="lg"
               block
-              icon={<Download className="h-5 w-5" />}
-              onClick={() => navigate(`/sessions/${session.id}/export`)}
+              icon={
+                zipping ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Share2 className="h-5 w-5" />
+                )
+              }
+              onClick={handleExportZip}
+              disabled={zipping}
             >
-              全部完成 · 去导出 CSV
+              {zipping ? "打包中…" : isAllDone ? "全部完成 · 导出照片包" : "导出照片包 · 分享/存文件"}
             </Button>
+            <button
+              onClick={() => navigate(`/sessions/${session.id}/export`)}
+              className="text-center text-2xs text-type-secondary hover:text-type-primary"
+            >
+              查看明细 / 导出 CSV
+            </button>
           </div>
         ) : undefined
       }
