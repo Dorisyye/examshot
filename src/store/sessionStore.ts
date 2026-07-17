@@ -132,7 +132,6 @@ export const useSessionStore = create<SessionStore>()(
       getSession: (id) => get().sessions.find((s) => s.id === id),
 
       addCandidate: (sessionId, c) => {
-        if (!c.name.trim()) return null;
         const sess = get().sessions.find((s) => s.id === sessionId);
         const caseCount = sess?.caseCount ?? 2;
         const cand = newCandidate(c, caseCount);
