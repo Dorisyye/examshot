@@ -1,0 +1,6 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# 用 HashRouter，不需要 SPA 重写规则
+# 所有路由都在 # 后面，服务器只需返回 index.html
